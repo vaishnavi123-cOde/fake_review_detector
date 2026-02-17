@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fake Review Detector</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f7fa;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 80px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 140px;
+            padding: 15px;
+            font-size: 14px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            resize: none;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 20px;
+            padding: 12px;
+            font-size: 15px;
+            border-radius: 6px;
+            border: none;
+            background-color: #4a6cf7;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            background-color: #3b57d0;
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .real {
+            background-color: #e6f9ec;
+            border: 1px solid #2ecc71;
+        }
+
+        .fake {
+            background-color: #fdecea;
+            border: 1px solid #e74c3c;
+        }
+
+        .prediction-text {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .bar-container {
+            width: 100%;
+            height: 12px;
+            background-color: #eee;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        .bar {
+            height: 12px;
+            border-radius: 6px;
+            width: 0%;
+            transition: width 0.4s ease-in-out;
+        }
+
+        .confidence {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Fake Review Detection</h2>
+
+    <textarea id="review" placeholder="Paste product review here..."></textarea>
+
+    <button id="analyzeBtn" onclick="predict()">Analyze Review</button>
+
+    <div class="result" id="resultBox">
+        <div class="prediction-text" id="predictionText"></div>
+        <div class="confidence" id="confidenceText"></div>
+        <div class="bar-container">
+            <div class="bar" id="confidenceBar"></div>
+        </div>
+    </div>
+
+    <div class="footer">
+        NLP Model: TF-IDF + Logistic Regression
+    </div>
+</div>
+
+<script>
+async function predict() {
+    const text = document.getElementById("review").value;
+    const button = document.getElementById("analyzeBtn");
+
+    if (!text.trim() || text.trim().split(" ").length < 4) {
+        alert("Please enter a meaningful review (at least 4 words).");
+        return;
+    }
+
+    button.innerText = "Analyzing...";
+    button.disabled = true;
+
+    try {
+        const response = await fetch("/predict", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ review_text: text })
+        });
+
+        const data = await response.json();
+
+        const resultBox = document.getElementById("resultBox");
+        const predictionText = document.getElementById("predictionText");
+        const confidenceText = document.getElementById("confidenceText");
+        const confidenceBar = document.getElementById("confidenceBar");
+
+        resultBox.style.display = "block";
+
+        let probabilityPercent = (data.fake_probability * 100).toFixed(1);
+
+        if (data.prediction === "FAKE") {
+            resultBox.className = "result fake";
+            predictionText.innerText = "⚠ HIGH RISK: FAKE REVIEW";
+            confidenceBar.style.backgroundColor = "#e74c3c";
+        } else {
+            resultBox.className = "result real";
+            predictionText.innerText = "✓ REVIEW LOOKS GENUINE";
+            confidenceBar.style.backgroundColor = "#2ecc71";
+        }
+
+        confidenceText.innerText = "Fake Probability: " + probabilityPercent + "%";
+        confidenceBar.style.width = probabilityPercent + "%";
+
+    } catch (error) {
+        alert("Error connecting to server.");
+        console.error(error);
+    }
+
+    button.innerText = "Analyze Review";
+    button.disabled = false;
+}
+</script>
+
+</body>
+</html>
